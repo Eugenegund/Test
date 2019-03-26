@@ -162,7 +162,7 @@ int ToChangeUrl(char* channel_Id, char* url, char* newUrl)
 
 	int CountTok;
 	CountTok = jsmn_parse(&JsonParser, TextBuf, strlen(TextBuf), Toks, sizeof(Toks)/sizeof(Toks[0]));
-	if (CountTok < 0) 
+	if (0 > CountTok) 
 	{
 		close(RedirectBase);
 		syslog(LOG_ERR, "Error parsing JSON: No objects found");
@@ -171,7 +171,7 @@ int ToChangeUrl(char* channel_Id, char* url, char* newUrl)
 	}
 
 	// Элемент "верхнего уровня" в json файле - "объект"
-	if (CountTok < 1 || Toks[0].type != JSMN_OBJECT) 
+	if (1 > CountTok || JSMN_OBJECT != Toks[0].type) 
 	{
 		close(RedirectBase);
 		syslog(LOG_ERR, "Error parsing JSON: Invalid top-level object");
@@ -181,7 +181,7 @@ int ToChangeUrl(char* channel_Id, char* url, char* newUrl)
 	// Пробегаем по всем ключам
 	for (int i = 1; i < CountTok; i++) 
 	{
-		if (CheckKeyJson(TextBuf, &Toks[i], url) == 0)
+		if (0 == CheckKeyJson(TextBuf, &Toks[i], url))
 		{
 			snprintf(newUrl, Toks[i+1].end-Toks[i+1].start + 1, TextBuf + Toks[i+1].start);			
 			i++;
