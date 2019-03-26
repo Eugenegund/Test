@@ -43,19 +43,20 @@ int main()
 	char Protocol[10]; 
 	char Url[50]; 
 	char NewUrl[50];
-	ParsingRequest(Request, Channel_Id, Protocol, Url, strlen(Request));
+	int ResultCodeParsingRequest = -1;
+	ResultCodeParsingRequest = ParsingRequest(Request, Channel_Id, Protocol, Url, strlen(Request));
 
 	int ResultCodeChangeUrl = -1;
 	ResultCodeChangeUrl = ToChangeUrl(Channel_Id, Url, NewUrl);
 
 	char Answer[256];
-	if(0 != strncmp(AnswerCodeERR, NewUrl, strlen(AnswerCodeERR)))
+	if(-1 == ResultCodeChangeUrl || -1 == ResultCodeParsingRequest)
 	{
-		sprintf(Answer, "%s %s%s%s %s", Channel_Id, AnswerCodeOk, Protocol, NewUrl, "\n");
+		sprintf(Answer, "%s %s %s", Channel_Id, AnswerCodeERR, "\n");
 	}
 	else
 	{
-		sprintf(Answer, "%s %s %s", Channel_Id, AnswerCodeERR, "\n");
+		sprintf(Answer, "%s %s%s%s %s", Channel_Id, AnswerCodeOk, Protocol, NewUrl, "\n");
 	}
 
 	// Отправляем буфер с ответом прокси-серверу
@@ -116,7 +117,6 @@ int ToChangeUrl(char* channel_Id, char* url, char* newUrl)
 	RedirectBase = open("/etc/squid/RedirectBase.json", O_RDONLY);
 	if(0 > RedirectBase)
 	{
-		snprintf(newUrl, strlen("ERR")+1, "ERR");
 		close(RedirectBase);
 		syslog(LOG_ERR, "Redirection base not found");			
 		return -1;
@@ -143,7 +143,6 @@ int ToChangeUrl(char* channel_Id, char* url, char* newUrl)
 	{
 		if(-1 == CountBytesRead)
 		{
-			snprintf(newUrl, strlen("ERR")+1, "ERR");
 			close(RedirectBase);
 			syslog(LOG_ERR, "Could not read redirection base");
 			free(TextBuf);			
@@ -164,16 +163,14 @@ int ToChangeUrl(char* channel_Id, char* url, char* newUrl)
 	int CountTok;
 	CountTok = jsmn_parse(&JsonParser, TextBuf, strlen(TextBuf), Toks, sizeof(Toks)/sizeof(Toks[0]));
 	if (CountTok < 0) {
-		snprintf(newUrl, strlen("ERR")+1, "ERR");
 		close(RedirectBase);
 		syslog(LOG_ERR, "Error parsing JSON: No objects found");
 		free(TextBuf);				
 		return -1;
 	}
 
-	// Элемент верхнего уровня - объект
+	// Элемент "верхнего уровня" в json файле - "объект"
 	if (CountTok < 1 || Toks[0].type != JSMN_OBJECT) {
-		snprintf(newUrl, strlen("ERR")+1, "ERR");
 		close(RedirectBase);
 		syslog(LOG_ERR, "Error parsing JSON: Invalid top-level object");
 		free(TextBuf);				
